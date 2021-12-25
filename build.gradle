@@ -10,6 +10,22 @@ repositories {
 }
 
 dependencies {
+    // https://mvnrepository.com/artifact/io.netty/netty-handler
+    implementation 'io.netty:netty-handler:4.1.72.Final'
+    // https://mvnrepository.com/artifact/io.netty/netty-buffer
+    implementation 'io.netty:netty-buffer:4.1.72.Final'
+    // https://mvnrepository.com/artifact/io.netty/netty-transport
+    implementation 'io.netty:netty-transport:4.1.72.Final'
+    // https://mvnrepository.com/artifact/io.netty/netty-codec
+    implementation 'io.netty:netty-codec:4.1.72.Final'
+
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-pool2
+    implementation 'org.apache.commons:commons-pool2:2.11.1'
+
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+    implementation 'org.slf4j:slf4j-api:1.7.32'
+    // https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
+    testImplementation 'ch.qos.logback:logback-classic:1.2.10'
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
