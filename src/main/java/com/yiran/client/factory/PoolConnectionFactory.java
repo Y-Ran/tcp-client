@@ -2,9 +2,6 @@ package com.yiran.client.factory;
 
 import com.yiran.client.Connection;
 import org.apache.commons.pool2.BasePooledObjectFactory;
-import org.apache.commons.pool2.DestroyMode;
-import org.apache.commons.pool2.PooledObject;
-import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.slf4j.Logger;
@@ -35,63 +32,7 @@ public class PoolConnectionFactory<REQ, RES> implements ConnectionFactory<REQ, R
         config.setTestOnBorrow(poolConfig.isTestOnBorrow());
         config.setTestWhileIdle(poolConfig.isTestWhileIdle());
         // 非长连接 需要断开
-        BasePooledObjectFactory<Connection<REQ, RES>> connectionPolledObjectFactory = new BasePooledObjectFactory<>() {
-            @Override
-            public Connection<REQ, RES> create() throws Exception {
-                try {
-                    Connection<REQ, RES> connection = connectionFactory.getConnection();
-                    connection.connect();
-                    return connection;
-                } finally {
-                    LOGGER.debug("makeObject connection ...");
-                }
-            }
-
-            @Override
-            public PooledObject<Connection<REQ, RES>> wrap(Connection<REQ, RES> obj) {
-                return new DefaultPooledObject<>(obj);
-            }
-
-            @Override
-            public void destroyObject(PooledObject<Connection<REQ, RES>> p, DestroyMode destroyMode) throws Exception {
-                try {
-                    passivateObject(p);
-                    Connection<REQ, RES> connection = p.getObject();
-                    connection.close();
-                    p.markAbandoned();
-                } finally {
-                    LOGGER.debug("destroyObject connection ...");
-                }
-            }
-
-            @Override
-            public boolean validateObject(PooledObject<Connection<REQ, RES>> p) {
-                LOGGER.debug("validateObject connection ...");
-                if (p.getObject() == null) {
-                    return false;
-                }
-                Connection<REQ, RES> connection = p.getObject();
-                return !connection.isClosed();
-            }
-
-            @Override
-            public void activateObject(PooledObject<Connection<REQ, RES>> p) throws Exception {
-                try {
-                    Connection<REQ, RES> connection = p.getObject();
-                    if (!connection.isClosed()) {
-                        return;
-                    }
-                    connection.connect();
-                } finally {
-                    LOGGER.debug("activateObject connection ...");
-                }
-            }
-
-            @Override
-            public void destroyObject(PooledObject<Connection<REQ, RES>> p) throws Exception {
-                LOGGER.debug("passivateObject connection ...");
-            }
-        };
+        BasePooledObjectFactory<Connection<REQ, RES>> connectionPolledObjectFactory = new ConnectionPolledObjectFactory<>(connectionFactory);
         this.internalPool = new GenericObjectPool<>(connectionPolledObjectFactory, config);
         this.initPool(poolConfig.getMinIdle());
     }
@@ -143,20 +84,15 @@ public class PoolConnectionFactory<REQ, RES> implements ConnectionFactory<REQ, R
                     return thread;
                 });
         for (int i = 1; i <= minIdle; i++) {
-            try {
-                executor.execute(() -> {
-                    try {
-                        this.internalPool.addObject();
-                    } catch (Exception e) {
-                        LOGGER.error("初始化tcp连接池异常 ", e);
-                    } finally {
-                        latch.countDown();
-                    }
-                });
-                Thread.sleep(5);
-            } catch (InterruptedException e) {
-                LOGGER.error("", e);
-            }
+            executor.execute(() -> {
+                try {
+                    this.internalPool.addObject();
+                } catch (Exception e) {
+                    LOGGER.error("初始化tcp连接池异常 ", e);
+                } finally {
+                    latch.countDown();
+                }
+            });
         }
         try {
             latch.await();

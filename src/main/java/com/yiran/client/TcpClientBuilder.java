@@ -1,10 +1,9 @@
 package com.yiran.client;
 
 import com.yiran.client.factory.ConnectionFactory;
-import com.yiran.client.factory.NormalConnectionFactory;
 import com.yiran.client.factory.PoolConfig;
 import com.yiran.client.factory.PoolConnectionFactory;
-import com.yiran.client.netty.NettyConnectionImpl;
+import com.yiran.client.netty.NettyNormalConnectionFactory;
 
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -40,31 +39,12 @@ public class TcpClientBuilder<REQ, RES> {
     }
 
     /**
-     * @param reqClass 请求包class
-     * @param resClass 响应包class
-     * @param <NREQ>   请求包类型
-     * @param <NRES>   响应包类型
-     * @return
-     */
-    public static <NREQ, NRES> TcpClientBuilder<NREQ, NRES> open(Class<NREQ> reqClass, Class<NRES> resClass) {
-        return new TcpClientBuilder<>();
-    }
-
-    /**
      * 构建tcp客户端
      *
      * @return
      */
     public TcpClient<REQ, RES> build() {
-        ConnectionFactory<REQ, RES> connectionFactory = null;
-        switch (this.type) {
-            case NETTY:
-                connectionFactory = new NormalConnectionFactory<>(tcpClientConfig, NettyConnectionImpl::new);
-                break;
-            case SOCKET:
-                throw new UnsupportedOperationException("不支持当前类型 socket...");
-            default:
-        }
+        ConnectionFactory<REQ, RES> connectionFactory = new NettyNormalConnectionFactory<>(tcpClientConfig);
         if (pool) {
             PoolConfig poolConfig = new PoolConfig();
             poolConfig.setMaxIdle(maxIdle);

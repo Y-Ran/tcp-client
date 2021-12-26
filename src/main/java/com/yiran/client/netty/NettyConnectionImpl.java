@@ -20,9 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-public class NettyConnectionImpl<REQ, RES>
-        extends SimpleChannelInboundHandler<RES>
-        implements Connection<REQ, RES> {
+public class NettyConnectionImpl<REQ, RES> extends SimpleChannelInboundHandler<RES> implements Connection<REQ, RES> {
     public static final Logger LOGGER = LoggerFactory.getLogger(NettyConnectionImpl.class);
     /**
      * 目标地址
