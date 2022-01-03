@@ -2,6 +2,8 @@ package com.yiran.client.factory;
 
 import com.yiran.client.Connection;
 
+import java.io.IOException;
+
 public interface ConnectionFactory<REQ, RES> {
 
     /**
@@ -9,6 +11,6 @@ public interface ConnectionFactory<REQ, RES> {
      *
      * @return
      */
-    Connection<REQ, RES> getConnection();
+    Connection<REQ, RES> getConnection() throws IOException;
 
 }

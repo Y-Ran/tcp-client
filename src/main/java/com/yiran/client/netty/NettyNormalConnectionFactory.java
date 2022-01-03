@@ -15,7 +15,9 @@ public class NettyNormalConnectionFactory<REQ, RES> extends NormalConnectionFact
 
     @Override
     protected Connection<REQ, RES> createConnection(TcpClientConfig<REQ, RES> tcpClientConfig) {
-        return new NettyConnectionImpl<>(tcpClientConfig);
+        // 使用匿名子类 保证netty可以正确解析泛型参数
+        return new NettyConnectionImpl<>(tcpClientConfig) {
+        };
     }
 
 }

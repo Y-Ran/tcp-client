@@ -3,6 +3,8 @@ package com.yiran.client.factory;
 import com.yiran.client.Connection;
 import com.yiran.client.TcpClientConfig;
 
+import java.io.IOException;
+
 public abstract class NormalConnectionFactory<REQ, RES> implements ConnectionFactory<REQ, RES> {
 
     private final TcpClientConfig<REQ, RES> tcpClientConfig;
@@ -15,8 +17,10 @@ public abstract class NormalConnectionFactory<REQ, RES> implements ConnectionFac
     }
 
     @Override
-    public Connection<REQ, RES> getConnection() {
-        return createConnection(tcpClientConfig);
+    public Connection<REQ, RES> getConnection() throws IOException {
+        Connection<REQ, RES> connection = createConnection(tcpClientConfig);
+        connection.connect();
+        return connection;
     }
 
     /**

@@ -2,6 +2,8 @@ package com.yiran.client.netty;
 
 import com.yiran.client.Connection;
 import com.yiran.client.TcpClientConfig;
+import com.yiran.client.TcpDecoder;
+import com.yiran.client.TcpEncoder;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -22,6 +24,8 @@ import java.util.function.Supplier;
 
 public class NettyConnectionImpl<REQ, RES> extends SimpleChannelInboundHandler<RES> implements Connection<REQ, RES> {
     public static final Logger LOGGER = LoggerFactory.getLogger(NettyConnectionImpl.class);
+
+    private final NettyConnectionImpl<REQ, RES> instance;
     /**
      * 目标地址
      */
@@ -34,11 +38,6 @@ public class NettyConnectionImpl<REQ, RES> extends SimpleChannelInboundHandler<R
      * 写超时时间
      */
     private final long writerTimeoutMill;
-
-    /**
-     * SO_BACKLOG
-     */
-    private final int soBackLog;
     /**
      * TCP_NODELAY 是否关闭delay算法
      */
@@ -50,11 +49,11 @@ public class NettyConnectionImpl<REQ, RES> extends SimpleChannelInboundHandler<R
     /**
      * 请求编码器
      */
-    private final NettyEncoderHandler<REQ> encoderHandler;
+    private final TcpEncoder<REQ> tcpEncoder;
     /**
      * 响应解码器
      */
-    private final NettyDecoderHandler<RES> decoderHandler;
+    private final TcpDecoder<RES> tcpDecoder;
     /**
      * channel
      */
@@ -86,11 +85,12 @@ public class NettyConnectionImpl<REQ, RES> extends SimpleChannelInboundHandler<R
         this.writerTimeoutMill = tcpClientConfig.getWriterIdleTime() * 1000L;
         this.getHeartPackageFunc = tcpClientConfig.getHeartGet();
         this.isHeartResponse = tcpClientConfig.getIsHeartResponse();
-        this.soBackLog = tcpClientConfig.getSoBackLog();
         this.tcpNoDelay = tcpClientConfig.isTcpNoDelay();
         this.soKeepAlive = tcpClientConfig.isSoKeepAlive();
-        this.encoderHandler = new NettyEncoderHandler<>(tcpClientConfig.getTcpEncoder());
-        this.decoderHandler = new NettyDecoderHandler<>(tcpClientConfig.getTcpDecoder());
+        this.tcpEncoder = tcpClientConfig.getTcpEncoder();
+        this.tcpDecoder = tcpClientConfig.getTcpDecoder();
+
+        this.instance = this;
     }
 
     @Override
@@ -134,7 +134,6 @@ public class NettyConnectionImpl<REQ, RES> extends SimpleChannelInboundHandler<R
         EventLoopGroup group = new NioEventLoopGroup();
         bootstrap.group(group)
                 .channel(NioSocketChannel.class)
-                .option(ChannelOption.SO_BACKLOG, soBackLog)
                 .option(ChannelOption.TCP_NODELAY, tcpNoDelay)
                 // 长连接
                 .option(ChannelOption.SO_KEEPALIVE, soKeepAlive)
@@ -143,11 +142,13 @@ public class NettyConnectionImpl<REQ, RES> extends SimpleChannelInboundHandler<R
                     @Override
                     public void initChannel(SocketChannel ch) {
                         ChannelPipeline pipeline = ch.pipeline();
-                        pipeline.addLast("decoder", decoderHandler);
-                        pipeline.addLast("encoder", encoderHandler);
+                        pipeline.addLast("decoder", new NettyDecoderHandler<>(tcpDecoder));
+                        // 使用匿名子类 保证netty可以正确解析泛型参数
+                        pipeline.addLast("encoder", new NettyEncoderHandler<>(tcpEncoder) {
+                        });
                         // 超时检测放到解码器后可以保证是解码成功才记录正常数据的超时判断，防止垃圾数据长连接在线
                         pipeline.addLast(new IdleStateHandler(readTimeoutMill, writerTimeoutMill, 0, TimeUnit.MILLISECONDS));
-                        pipeline.addLast("handler", this);
+                        pipeline.addLast("handler", instance);
                     }
                 });
         ChannelFuture channelFuture;
